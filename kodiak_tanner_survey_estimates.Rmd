@@ -1,0 +1,57 @@
+---
+title: "Kodiak Tanner Survey Estimates"
+author: "William Gaeuman"
+date: "October 30, 2017"
+output: 
+  html_document:
+    code_folding: hide
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+During 2017 Tanner crab GHL discussions for the Kodiak, Chignik and South Peninsula Districts, I was asked to quantify the variability associated with point estimates of 2017 Tanner crab abundance calculated from annual ADF&G trawl survey data. For a number of reasons, including the fact that the survey is not based on an actual probability sample, estimates of precision given here should be considered purely heuristic in nature. Even so, they help provide necessary context for meaningful interpretation of the point estimates. At the very least, they serve to remind everyone involved that the point **estimates** are exactly that.  
+
+The method currently employed to calculate abundance estimates used in applying regulation Tanner crab harvest strategy treats the tows within each section of a given district as a stratified random sample with one sample point (tow) per stratum (station). Accordingly, area swept tow densities are expanded to the corresponding station areas and then summed to obtain an estimate of section abundance. With one point per stratum, however, variance estimation assuming this design is problematic. One workaround is to estimate the individual stratum (station) variances by the sample variance of all section tow densities and go with the standard variance estimator for stratified random sampling. I have chosen to quantify precision in terms of a 50% confidence interval assuming a lognormal distribution on the point estimates. Note that conventional 90 or 95% confidence intervals would be, at least in some cases, ridiculously large. These intervals are obtained by back transforming (exponentiating) the usual normal based confidence intervals for the logarithm of the point estimates with standard deviation on the log scale estimated by $$\hat{\sigma}=\sqrt{\mathrm{ln}\left(1+\widehat{\mathbf{CV}}^{2}\right)} ,$$ where $\widehat{\mathbf{CV}}$ is the estimated coefficient of variation of the point estimate on the original scale.  
+
+```{r calculations}
+x <- suppressMessages(read_csv("data/tanners.csv")) %>%
+     mutate(area.id = factor(10 * tdist + ifelse(is.na(tsect), 0, tsect)), 
+            stat.area = station_area_nm2,
+            mm.abund = tot_mature, 
+            mm.dens = mm.abund / stat.area) %>%
+	   select(area.id, stat.area, mm.dens, mm.abund) %>%
+	   group_by(area.id) %>%	
+	   summarise(mm.abund1 = sum(mm.abund), 
+	             mm.abund2 = mean(mm.dens) * sum(stat.area),
+	             sd1 = sqrt(sum(stat.area ^ 2) * var(mm.dens)), 
+	             sd2 = sqrt(sum(stat.area) ^ 2 * var(mm.dens) / n()),
+	             lsd1 = sqrt(log(1 + (sd1 / mm.abund1) ^ 2)), 
+	             lsd2 = sqrt(log(1 + (sd2 / mm.abund2) ^ 2)),
+	             low1 = exp(log(mm.abund1) - 0.68 * lsd1),
+	             low2 = exp(log(mm.abund2) - 0.68 * lsd2), 
+	             up1 = exp(log(mm.abund1) + 0.68 * lsd1), 
+	             up2 = exp(log(mm.abund2) + 0.68 * lsd2))
+
+x <- as.tibble(cbind(select(gather(x, method, abundance, mm.abund1, mm.abund2), area.id, abundance),
+                     select(gather(x, method, lower, low1, low2), lower), 
+                     select(gather(x, method, upper, up1, up2), upper))) %>%
+     mutate(Method = rep(c("Stratified", "SRS"), each = 12))
+
+```
+Results are here presented graphically for 2017 mature male abundance in the various sections of the Kodiak, Chignik and South Peninsula Districts based on `r nrow(read_csv("data/tanners.csv"))` completed station tows. For comparison, I have also computed estimates of mature male abundance and its variance assuming that section tows come from a simple random sample (SRS), which of course they do not. Because the stations can vary substantially in size within a section, the point estimates produced by the two methods are in some instances quite different. This is true, for example, of section 12 (Kodiak Northeast) due to the presence of some particularly large stations (25 nm^2^) with comparatively low catches.
+
+```{r display}
+ggplot(x, aes(area.id, abundance, color = Method)) + 
+  geom_point(size = 3) + 
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.3, size = 1) + 
+  theme_classic() + theme(legend.position = "bottom") + 
+  scale_color_manual(values = c("blue", "darkorange")) +
+  labs(title = "Estimated Mature Male Abundance by Section with (speculative) 50% CI", 
+       x = "Section", y = "Number (millions)") +
+  scale_y_continuous(breaks = seq(0, 8000000, by = 2000000), labels = c("0", "2", "4", "6", "8"))
+
+```
