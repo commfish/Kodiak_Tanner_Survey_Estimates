@@ -39,7 +39,7 @@ x <- suppressMessages(read_csv("data/tanners.csv")) %>%
 x <- as.tibble(cbind(select(gather(x, method, abundance, mm.abund1, mm.abund2), area.id, abundance),
                      select(gather(x, method, lower, low1, low2), lower), 
                      select(gather(x, method, upper, up1, up2), upper))) %>%
-     mutate(Method = rep(c("Stratified", "SRS"), each = 12))
+     mutate(Method = factor(rep(c("Stratified", "SRS"), each = 12)))
 
 ```
 Results are here presented graphically for 2017 mature male abundance in the various sections of the Kodiak, Chignik and South Peninsula Districts based on `r nrow(read_csv("data/tanners.csv"))` completed station tows. For comparison, I have also computed estimates of mature male abundance and its variance assuming that section tows come from a simple random sample (SRS), which of course they do not. Because the stations can vary substantially in size within a section, the point estimates produced by the two methods are in some instances quite different. This is true, for example, of section 12 (Kodiak Northeast) due to the presence of some particularly large stations (25 nm^2^) with comparatively low catches.
