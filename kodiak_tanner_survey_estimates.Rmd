@@ -31,10 +31,10 @@ x <- suppressMessages(read_csv("data/tanners.csv")) %>%
 	             sd2 = sqrt(sum(stat.area) ^ 2 * var(mm.dens) / n()),
 	             lsd1 = sqrt(log(1 + (sd1 / mm.abund1) ^ 2)), 
 	             lsd2 = sqrt(log(1 + (sd2 / mm.abund2) ^ 2)),
-	             low1 = exp(log(mm.abund1) - 0.68 * lsd1),
-	             low2 = exp(log(mm.abund2) - 0.68 * lsd2), 
-	             up1 = exp(log(mm.abund1) + 0.68 * lsd1), 
-	             up2 = exp(log(mm.abund2) + 0.68 * lsd2))
+	             low1 = mm.abund1 / exp(0.68 * lsd1),
+	             low2 = mm.abund2 / exp(0.68 * lsd2), 
+	             up1 = mm.abund1 * exp(0.68 * lsd1), 
+	             up2 = mm.abund2 * exp(0.68 * lsd2))
 
 x <- as.tibble(cbind(select(gather(x, method, abundance, mm.abund1, mm.abund2), area.id, abundance),
                      select(gather(x, method, lower, low1, low2), lower), 
